@@ -1,6 +1,27 @@
+
+
+'''features/comprar_produto.feature:
+
+    Feature: Comprar Produto
+        Como um cliente
+        Gostaria de comprar produtos no site Giuliana Flores
+        Para presentear alguém especial
+
+        Scenario: Comprar Rosas
+            Given que eu estou no site da Giuliana Flores
+            When eu pesquiso por "Rosas"
+            And eu clico no primeiro produto da lista
+            And eu adiciono o produto ao carrinho
+            Then o produto "Rosas" é exibido no carrinho
+    steps/comprar_produto_steps.py:'''
+
+
 from selenium import webdriver
+from behave import given, when, then
 from selenium.webdriver.common.by import By
 import time
+
+
 
 # Abrir o navegador e acessar o site
 driver = webdriver.Chrome()
@@ -32,24 +53,7 @@ product_price_cart = driver.find_element(By.CLASS_NAME, "basket-product-price").
 # Fechar o navegador
 driver.quit()
 
-features/comprar_produto.feature:
 
-Feature: Comprar Produto
-    Como um cliente
-    Gostaria de comprar produtos no site Giuliana Flores
-    Para presentear alguém especial
-
-    Scenario: Comprar Rosas
-        Given que eu estou no site da Giuliana Flores
-        When eu pesquiso por "Rosas"
-        And eu clico no primeiro produto da lista
-        And eu adiciono o produto ao carrinho
-        Then o produto "Rosas" é exibido no carrinho
-steps/comprar_produto_steps.py:
-
-from behave import given, when, then
-from selenium import webdriver
-from selenium.webdriver.common.by import By
 
 @given('que eu estou no site da Giuliana Flores')
 def step_impl(context):
@@ -78,10 +82,6 @@ def step_impl(context, produto):
     context.driver.quit()
 
 
-pages/home_page.py
-
-from selenium.webdriver.common.by import By
-
 class HomePage:
     def __init__(self, driver):
         self.driver = driver
@@ -93,9 +93,6 @@ class HomePage:
         search_box = self.driver.find_element(By.ID, "search")
         search_box.send_keys(product)
         search_box.submit()
-pages/product_page.py
-
-from selenium.webdriver.common.by import By
 
 class ProductPage:
     def __init__(self, driver):
@@ -109,7 +106,6 @@ class ProductPage:
 
     def add_to_cart(self):
         self.driver.find_element(By.NAME, "buy-button").click()
-pages/cart_page.py
 
 from selenium.webdriver.common.by import By
 
@@ -122,12 +118,7 @@ class CartPage:
 
     def get_product_price(self):
         return self.driver.find_element(By.CLASS_NAME, "basket-product-price").text
-test_comprar_produto.py
 
-from selenium import webdriver
-from pages.home_page import HomePage
-from pages.product_page import ProductPage
-from pages.cart_page import CartPage
 
 driver = webdriver.Chrome()
 home_page = HomePage(driver)

@@ -1,103 +1,123 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from time import sleep as tartaruga
 
-# Inicializar o driver do navegador
-driver = webdriver.Chrome()
+class WebDriverManager:
+    def __init__(self):
+        self.driver = webdriver.Chrome()
 
-# Navegar até o site da Giuliana Flores
-driver.get("https://www.giulianaflores.com.br/")
+    def open_page(self, url):
+        self.driver.get(url)
 
-# Pesquisar por um produto (ex: Rosas)
-search_box = driver.find_element(By.ID, "search")
-search_box.send_keys("Rosas")
-search_box.submit()
+    def close(self):
+        self.driver.quit()
 
-# Clicar no primeiro produto da lista
-driver.find_element(By.XPATH, "//div[@class='name']//a").click()
+class ProductVerifier:
+    @staticmethod
+    def verificar_preco(valores):
+        if valores[-1] == valores[-2]:
+            print('Valor igual ao presente no passo anterior')
+        else:
+            print('Valor diferente ao presente no passo anterior')
 
-# Obter nome e preço do produto na página do produto
-product_name = driver.find_element(By.XPATH, "//h1").text
-product_price = driver.find_element(By.CLASS_NAME, "price-new").text
+    @staticmethod
+    def verificar_nome_do_produto(nome_produto):
+        if nome_produto[-1].upper() == nome_produto[-2].upper():
+            print('Nome igual ao presente no passo anterior')
+        else:
+            print('Nome diferente ao presente no passo anterior')
 
-# Adicionar o produto ao carrinho
-driver.find_element(By.NAME, "buy-button").click()
+class GiulianaFloresBot:
+    def __init__(self):
+        self.driver_manager = WebDriverManager()
+        self.product_verifier = ProductVerifier()
+        self.lista_nome_produto = []
+        self.lista_preco_produto = []
 
-# Validar o nome e preço do produto no carrinho
-product_name_cart = driver.find_element(By.CLASS_NAME, "basket-product-name").text
-product_price_cart = driver.find_element(By.CLASS_NAME, "basket-product-price").text
+    def pesquisar_produto(self, produto):
+        self.driver_manager.open_page("https://www.giulianaflores.com.br/")
+        search_box = self.driver_manager.driver.find_element(By.ID, "txtDsKeyWord")
+        search_box.send_keys(produto)
+        botao_busca = self.driver_manager.driver.find_element(By.ID, 'btnSearch')
+        botao_busca.click()
 
-# Fechar o navegador
-driver.quit()
+    def coletar_dados_produto(self):
+        try:
+            pagina_produtos = WebDriverWait(self.driver_manager.driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, '//*[@id="content-site"]/div[2]/div'))
+            )
 
-from selenium.webdriver.common.by import By
+            nome_produto = pagina_produtos.find_element(By.XPATH, ".//a/h2")
+            preco_produto = pagina_produtos.find_element(By.XPATH, ".//a/div[2]/span[2]")
 
-class HomePage:
-    def __init__(self, driver):
-        self.driver = driver
+            self.lista_nome_produto.append(nome_produto.text)
+            self.lista_preco_produto.append(preco_produto.text)
 
-    def open(self):
-        self.driver.get("https://www.giulianaflores.com.br/")
+            original_handle = self.driver_manager.driver.current_window_handle
+            produto_link = pagina_produtos.find_element(By.XPATH, "/html/body/form/div[3]/main/div[2]/div/div[2]/div/div/ul/li[1]/div/a")
+            produto_href = produto_link.get_attribute('href')
+            self.driver_manager.driver.execute_script("window.open('"+produto_href+"');")
 
-    def search_product(self, product):
-        search_box = self.driver.find_element(By.ID, "search")
-        search_box.send_keys(product)
-        search_box.submit()
+            tartaruga(5)  # Aguarde um segundo para garantir que o elemento está visível
+            all_handles = self.driver_manager.driver.window_handles
+            new_handle = None
+            for handle in all_handles:
+                if handle != original_handle:
+                    new_handle = handle
+                    break
+            self.driver_manager.driver.switch_to.window(new_handle)
 
-from selenium.webdriver.common.by import By
+            pagina_detalhe_produtos = WebDriverWait(self.driver_manager.driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, '//*[@id="content-site"]/div[6]/div[1]'))
+            )
 
-class ProductPage:
-    def __init__(self, driver):
-        self.driver = driver
+            nome_produto_detalhe = pagina_detalhe_produtos.find_element(By.XPATH, '//*[@id="ContentSite_lblProductDsName"]')
+            preco_produto_detalhe = pagina_detalhe_produtos.find_element(By.XPATH, '/html/body/form/div[3]/main/div[6]/div[1]/div[2]/div[6]/span[2]')
 
-    def get_product_name(self):
-        return self.driver.find_element(By.XPATH, "//h1").text
+            self.lista_nome_produto.append(nome_produto_detalhe.text)
+            self.lista_preco_produto.append(preco_produto_detalhe.text)
 
-    def get_product_price(self):
-        return self.driver.find_element(By.CLASS_NAME, "price-new").text
+            self.product_verifier.verificar_preco(self.lista_preco_produto)
+            self.product_verifier.verificar_nome_do_produto(self.lista_nome_produto)
 
-    def add_to_cart(self):
-        self.driver.find_element(By.NAME, "buy-button").click()
+            cep_primeira_parte = pagina_detalhe_produtos.find_element(By.XPATH,'//*[@id="ContentSite_txtZip"]')
+            cep_primeira_parte.send_keys('06120')
+            cep_segunda_parte = pagina_detalhe_produtos.find_element(By.XPATH,'//*[@id="ContentSite_txtZipComplement"]')
+            cep_segunda_parte.send_keys('040')
 
-from selenium.webdriver.common.by import By
+            adicionar_carrinho = pagina_detalhe_produtos.find_element(By.XPATH,'//*[@id="ContentSite_lbtBuy"]')
+            adicionar_carrinho.click()
+            tartaruga(5)
 
-class CartPage:
-    def __init__(self, driver):
-        self.driver = driver
+            seleciona_horario_entrega = pagina_detalhe_produtos.find_element(By.XPATH, "/html/body/form/div[3]/main/div[6]/div[1]/div[2]/div[10]/div[3]/div[6]/div[1]/ul/li[2]/input")
+            seleciona_horario_entrega.click()
+            clicar_botao_ok = pagina_detalhe_produtos.find_element(By.XPATH,'//*[@id="btConfirmShippingData"]')
+            clicar_botao_ok.click()
+            adicionar_carrinho.click()
 
-    def get_product_name(self):
-        return self.driver.find_element(By.CLASS_NAME, "basket-product-name").text
+            print('Aguardando página do carrinho........')
 
-    def get_product_price(self):
-        return self.driver.find_element(By.CLASS_NAME, "basket-product-price").text
+            nome_produto_no_carinho = self.driver_manager.driver.find_element(By.XPATH,'//*[@id="ContentSite_Basketcontrol1_idUpdatePanel"]/div[1]/div[2]/ul[2]/li/div[2]/span[1]/a')
+            valor_unitario_no_carinho = self.driver_manager.driver.find_element(By.XPATH,'//*[@id="ContentSite_Basketcontrol1_idUpdatePanel"]/div[1]/div[2]/ul[2]/li/div[4]/span[2]')
 
-from selenium import webdriver
-from pages.home_page import HomePage
-from pages.product_page import ProductPage
-from pages.cart_page import CartPage
+            self.lista_nome_produto.append(nome_produto_no_carinho.text)
+            self.lista_preco_produto.append(valor_unitario_no_carinho.text)
 
-driver = webdriver.Chrome()
-home_page = HomePage(driver)
-product_page = ProductPage(driver)
-cart_page = CartPage(driver)
+            self.product_verifier.verificar_preco(self.lista_preco_produto)
+            self.product_verifier.verificar_nome_do_produto(self.lista_nome_produto)
 
-# Navegar até a página inicial
-home_page.open()
+            tartaruga(5)
 
-# Pesquisar por um produto
-home_page.search_product("Rosas")
+        except Exception as e:
+            print(f"Erro ao tentar ver detalhes do produto: {e}")
 
-# Obter nome e preço do produto na página de resultados
-product_name = product_page.get_product_name()
-product_price = product_page.get_product_price()
+    def fechar(self):
+        self.driver_manager.close()
 
-# Clicar no produto para ver detalhes
-# Validar nome e preço do produto na página do produto
-# Adicionar produto ao carrinho
-product_page.add_to_cart()
-
-# Obter nome e preço do produto no carrinho
-product_name_cart = cart_page.get_product_name()
-product_price_cart = cart_page.get_product_price()
-
-# Fechar o navegador
-driver.quit()
+# Uso das classes refatoradas
+bot = GiulianaFloresBot()
+bot.pesquisar_produto("Rosas")
+bot.coletar_dados_produto()
+bot.fechar()
